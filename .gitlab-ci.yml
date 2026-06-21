@@ -122,10 +122,8 @@ trivy_image_scan:
 push_to_artifact_registry:
   stage: push
   image: google/cloud-sdk:alpine
-    services:
+  services:
     - name: docker:24.0-dind
-      command: ["--tls=false"]
-
   variables:
     DOCKER_HOST: tcp://docker:2375
     DOCKER_TLS_CERTDIR: ""
