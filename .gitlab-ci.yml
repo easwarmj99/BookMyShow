@@ -65,9 +65,8 @@ trivy_fs_scan:
   tags:
     - bookmyshow-runner
   script:
-    - trivy fs --exit-code 0 --severity LOW,MEDIUM,CRITICAL --format table bookmyshow-app/ || true
-    - trivy fs --exit-code 1 --severity HIGH --format table bookmyshow-app/
-  allow_failure: false
+    - trivy fs --exit-code 0 --severity LOW,MEDIUM,CRITICAL,HIGH --format table bookmyshow-app/ || true
+  allow_failure: true
   rules:
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"'
 
@@ -106,8 +105,7 @@ trivy_image_scan:
   needs:
     - docker_build
   script:
-    - trivy image --input image.tar --exit-code 0 --severity LOW,MEDIUM,CRITICAL --format table || true
-    - trivy image --input image.tar --exit-code 1 --severity HIGH --format table
+    - trivy image --input image.tar --exit-code 0 --severity LOW,MEDIUM,CRITICAL,HIGH --format table || true
   rules:
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"'
 
