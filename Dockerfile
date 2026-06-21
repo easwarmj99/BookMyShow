@@ -7,7 +7,7 @@ FROM node:18-alpine AS build
 WORKDIR /app
 # Install dependencies first (better layer caching)
 COPY bookmyshow-app/package*.json ./
-RUN npm ci --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 # Copy source and build static assets
 COPY bookmyshow-app/ ./
 RUN npm run build
