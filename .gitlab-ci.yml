@@ -59,7 +59,9 @@ sonarqube_scan:
 
 trivy_fs_scan:
   stage: security_scan
-  image: aquasec/trivy:latest
+  image: 
+    name: aquasec/trivy:latest
+    entrypoint: [""]
   tags:
     - bookmyshow-runner
   script:
@@ -96,14 +98,16 @@ docker_build:
 
 trivy_image_scan:
   stage: build
-  image: aquasec/trivy:latest
+  image: 
+    name: aquasec/trivy:latest
+    entrypoint: [""]
   tags:
     - bookmyshow-runner
   needs:
     - docker_build
   script:
-    - trivy image --input image.tar --exit-code 0 --severity LOW,MEDIUM --format table || true
-    - trivy image --input image.tar --exit-code 1 --severity CRITICAL,HIGH --format table
+    - trivy image --input image.tar --exit-code 0 --severity LOW,MEDIUM,CRITICAL --format table || true
+    - trivy image --input image.tar --exit-code 1 --severity HIGH --format table
   rules:
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"'
 
