@@ -69,12 +69,12 @@ spec:
 
           livenessProbe:
              httpGet:
-                path: /
+                path: /health
                 port: 80
 
           readinessProbe:
              httpGet:
-               path: /
+               path: /health
                port: 80 
                
           securityContext:
