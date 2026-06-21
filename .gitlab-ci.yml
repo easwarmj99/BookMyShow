@@ -39,9 +39,7 @@ sonarqube_scan:
   tags:
     - bookmyshow-runner
   variables:
-    SONAR_HOST_URL: "${SONAR_HOST_URL}"
-    SONAR_TOKEN: "${SONAR_TOKEN}"
-    GIT_DEPTH: "0"
+       GIT_DEPTH: "0"
   script:
     - echo "SONAR_HOST_URL=$SONAR_HOST_URL"
     - sonar-scanner
