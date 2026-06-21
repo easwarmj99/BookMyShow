@@ -30,7 +30,7 @@ spec:
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "80"
-        prometheus.io/path: "/health"
+        prometheus.io/path: "/"
 
     spec:
       serviceAccountName: bms-ksa
