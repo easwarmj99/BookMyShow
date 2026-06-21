@@ -10,7 +10,7 @@ COPY bookmyshow-app/package*.json ./
 RUN npm install --legacy-peer-deps
 # Copy source and build static assets
 COPY bookmyshow-app/ ./
-ENV NODE_OPTIONS=--openssl-legacy-provider
+
 RUN npm run build
 # ---------- Stage 2: Serve ----------
 FROM nginx:1.25-alpine
