@@ -154,25 +154,33 @@ push_to_artifact_registry:
 
 deploy_to_gke:
   stage: deploy
-  image: google/cloud-sdk:alpine
+  image: gcr.io/google.com/cloudsdktool/google-cloud-cli:stable
   tags:
     - bookmyshow-runner
   needs:
     - push_to_artifact_registry
   before_script:
-    - apk add --no-cache gettext
-    - echo "${GCP_SA_KEY}" > /tmp/gcp-key.json
+    - apt-get update && apt-get install -y gettext-base
+    - echo "$GCP_SA_KEY" > /tmp/gcp-key.json
     - gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
     - gcloud config set project ${GCP_PROJECT_ID}
+    - export USE_GKE_GCLOUD_AUTH_PLUGIN=True
     - gcloud container clusters get-credentials ${GKE_CLUSTER} --zone ${GKE_ZONE} --project ${GCP_PROJECT_ID}
   script:
+    - kubectl version --client
     - kubectl apply -f k8s/namespace.yaml
+
     - export IMAGE_FULL="${FULL_IMAGE}:${IMAGE_TAG}"
+
     - envsubst < k8s/deployment.yaml > k8s/deployment-rendered.yaml
+
     - sed -i "s#REGION-docker.pkg.dev/PROJECT_ID/bookmyshow-repo/bookmyshow:IMAGE_TAG#${IMAGE_FULL}#g" k8s/deployment-rendered.yaml
+
     - kubectl apply -f k8s/deployment-rendered.yaml -n ${K8S_NAMESPACE}
+
     - kubectl apply -f k8s/service.yaml -n ${K8S_NAMESPACE}
-    - kubectl rollout status deployment/bookmyshow-deployment -n ${K8S_NAMESPACE} --timeout=180s
+
+    - kubectl rollout status deployment/bookmyshow-deployment -n ${K8S_NAMESPACE} --timeout=300s
   after_script:
     - rm -f /tmp/gcp-key.json
   rules:
@@ -184,15 +192,16 @@ deploy_to_gke:
 
 validate_deployment:
   stage: validate
-  image: google/cloud-sdk:alpine
+  image: gcr.io/google.com/cloudsdktool/google-cloud-cli:stable
   tags:
     - bookmyshow-runner
   needs:
     - deploy_to_gke
   before_script:
-    - echo "${GCP_SA_KEY}" > /tmp/gcp-key.json
+    - echo "$GCP_SA_KEY" > /tmp/gcp-key.json
     - gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
     - gcloud config set project ${GCP_PROJECT_ID}
+    - export USE_GKE_GCLOUD_AUTH_PLUGIN=True
     - gcloud container clusters get-credentials ${GKE_CLUSTER} --zone ${GKE_ZONE} --project ${GCP_PROJECT_ID}
   script:
     - echo "Checking pod status..."
