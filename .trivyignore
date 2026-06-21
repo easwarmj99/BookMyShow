@@ -1,0 +1,8 @@
+# .trivyignore
+# List accepted/waived CVEs with mandatory justification comments
+# Format: CVE-ID # Reason | Accepted-by | Date | Ticket
+# IMPORTANT: Each entry requires formal risk acceptance documentation
+# Example entries (uncomment and fill in actual CVEs as needed):
+# CVE-2023-XXXXX # Dev-only dependency, not in production build | security-team | 2024-01-15 | SEC-
+123
+# CVE-2023-YYYYY # Waiver approved, vendor patch in progress | CISO | 2024-02-01 | SEC-456
