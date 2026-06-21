@@ -44,11 +44,12 @@ COPY --from=builder /app/build /usr/share/nginx/html
 # Copy custom nginx configuration (created in step 3.4)
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Fix permissions so non-root nginx can run
-RUN chown -R appuser:appgroup /usr/share/nginx/html && \
-chown -R appuser:appgroup /var/cache/nginx && \
-chown -R appuser:appgroup /var/log/nginx && \
-touch /var/run/nginx.pid && \
-chown appuser:appgroup /var/run/nginx.pid
+RUN mkdir -p /var/cache/nginx /var/log/nginx /var/run && \
+    chown -R appuser:appgroup /usr/share/nginx/html && \
+    chown -R appuser:appgroup /var/cache/nginx && \
+    chown -R appuser:appgroup /var/log/nginx && \
+    touch /var/run/nginx.pid && \
+    chown appuser:appgroup /var/run/nginx.pid
 # Switch to non-root user
 USER appuser
 EXPOSE 80
