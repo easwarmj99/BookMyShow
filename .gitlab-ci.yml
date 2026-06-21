@@ -122,12 +122,21 @@ trivy_image_scan:
 push_to_artifact_registry:
   stage: push
   image: google/cloud-sdk:alpine
+    services:
+    - name: docker:24.0-dind
+      command: ["--tls=false"]
+
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
   tags:
     - bookmyshow-runner
   needs:
     - docker_build
     - trivy_image_scan
   before_script:
+    - apk add --no-cache docker
+    - docker version
     - docker load -i image.tar
     - echo "${GCP_SA_KEY}" > /tmp/gcp-key.json
     - gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
