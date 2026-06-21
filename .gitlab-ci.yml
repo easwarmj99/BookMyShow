@@ -1,0 +1,203 @@
+# ===================================================================
+# .gitlab-ci.yml
+# End-to-End DevSecOps Pipeline: BookMyShow
+# Checkout -> SonarQube -> Trivy -> Docker Build -> Artifact Registry -> GKE
+# ===================================================================
+
+stages:
+  - code_quality
+  - security_scan
+  - build
+  - push
+  - deploy
+  - validate
+
+variables:
+  IMAGE_NAME: "bookmyshow"
+  AR_REGION: "asia-south1"
+  AR_REPO: "bookmyshow-repo"
+  AR_HOST: "${AR_REGION}-docker.pkg.dev"
+  FULL_IMAGE: "${AR_HOST}/${GCP_PROJECT_ID}/${AR_REPO}/${IMAGE_NAME}"
+  IMAGE_TAG: "${CI_COMMIT_SHORT_SHA}"
+  GKE_CLUSTER: "bookmyshow-cluster"
+  GKE_ZONE: "asia-south1-a"
+  K8S_NAMESPACE: "bookmyshow"
+  DOCKER_TLS_CERTDIR: "/certs"
+  GIT_DEPTH: "0"
+
+workflow:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"'
+
+# ===================================================================
+# STAGE 1: SonarQube Scan
+# ===================================================================
+
+sonarqube_scan:
+  stage: code_quality
+  image: sonarsource/sonar-scanner-cli:latest
+  tags:
+    - bookmyshow-runner
+  variables:
+    SONAR_HOST_URL: "${SONAR_HOST_URL}"
+    SONAR_TOKEN: "${SONAR_TOKEN}"
+    GIT_DEPTH: "0"
+  script:
+    - >
+      sonar-scanner
+      -Dsonar.projectKey=bookmyshow
+      -Dsonar.sources=bookmyshow-app/src
+      -Dsonar.host.url=${SONAR_HOST_URL}
+      -Dsonar.token=${SONAR_TOKEN}
+      -Dsonar.qualitygate.wait=true
+      -Dsonar.qualitygate.timeout=300
+  allow_failure: false
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"'
+
+# ===================================================================
+# STAGE 2: Trivy Scan (Filesystem / Dependencies)
+# ===================================================================
+
+trivy_fs_scan:
+  stage: security_scan
+  image: aquasec/trivy:latest
+  tags:
+    - bookmyshow-runner
+  script:
+    - trivy fs --exit-code 0 --severity LOW,MEDIUM,CRITICAL --format table bookmyshow-app/ || true
+    - trivy fs --exit-code 1 --severity HIGH --format table bookmyshow-app/
+  allow_failure: false
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"'
+
+# ===================================================================
+# STAGE 3: Docker Build
+# ===================================================================
+
+docker_build:
+  stage: build
+  image: docker:24.0
+  services:
+    - docker:24.0-dind
+  tags:
+    - bookmyshow-runner
+  script:
+    - docker build -t ${FULL_IMAGE}:${IMAGE_TAG} -t ${FULL_IMAGE}:latest .
+    - docker save ${FULL_IMAGE}:${IMAGE_TAG} -o image.tar
+  artifacts:
+    paths:
+      - image.tar
+    expire_in: 1 hour
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"'
+
+# ===================================================================
+# STAGE 3b: Trivy Image Scan
+# ===================================================================
+
+trivy_image_scan:
+  stage: build
+  image: aquasec/trivy:latest
+  tags:
+    - bookmyshow-runner
+  needs:
+    - docker_build
+  script:
+    - trivy image --input image.tar --exit-code 0 --severity LOW,MEDIUM --format table || true
+    - trivy image --input image.tar --exit-code 1 --severity CRITICAL,HIGH --format table
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"'
+
+# ===================================================================
+# STAGE 4: Push to Google Artifact Registry
+# ===================================================================
+
+push_to_artifact_registry:
+  stage: push
+  image: google/cloud-sdk:alpine
+  tags:
+    - bookmyshow-runner
+  needs:
+    - docker_build
+    - trivy_image_scan
+  before_script:
+    - docker load -i image.tar
+    - echo "${GCP_SA_KEY}" > /tmp/gcp-key.json
+    - gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
+    - gcloud auth configure-docker ${AR_HOST} --quiet
+    - gcloud config set project ${GCP_PROJECT_ID}
+  script:
+    - docker push ${FULL_IMAGE}:${IMAGE_TAG}
+    - docker push ${FULL_IMAGE}:latest
+  after_script:
+    - rm -f /tmp/gcp-key.json
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"'
+
+# ===================================================================
+# STAGE 5: Deploy to GKE
+# ===================================================================
+
+deploy_to_gke:
+  stage: deploy
+  image: google/cloud-sdk:alpine
+  tags:
+    - bookmyshow-runner
+  needs:
+    - push_to_artifact_registry
+  before_script:
+    - apk add --no-cache gettext
+    - echo "${GCP_SA_KEY}" > /tmp/gcp-key.json
+    - gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
+    - gcloud config set project ${GCP_PROJECT_ID}
+    - gcloud container clusters get-credentials ${GKE_CLUSTER} --zone ${GKE_ZONE} --project ${GCP_PROJECT_ID}
+  script:
+    - kubectl apply -f k8s/namespace.yaml
+    - export IMAGE_FULL="${FULL_IMAGE}:${IMAGE_TAG}"
+    - envsubst < k8s/deployment.yaml > k8s/deployment-rendered.yaml
+    - sed -i "s#REGION-docker.pkg.dev/PROJECT_ID/bookmyshow-repo/bookmyshow:IMAGE_TAG#${IMAGE_FULL}#g" k8s/deployment-rendered.yaml
+    - kubectl apply -f k8s/deployment-rendered.yaml -n ${K8S_NAMESPACE}
+    - kubectl apply -f k8s/service.yaml -n ${K8S_NAMESPACE}
+    - kubectl rollout status deployment/bookmyshow-deployment -n ${K8S_NAMESPACE} --timeout=180s
+  after_script:
+    - rm -f /tmp/gcp-key.json
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"'
+
+# ===================================================================
+# STAGE 6: Validation
+# ===================================================================
+
+validate_deployment:
+  stage: validate
+  image: google/cloud-sdk:alpine
+  tags:
+    - bookmyshow-runner
+  needs:
+    - deploy_to_gke
+  before_script:
+    - echo "${GCP_SA_KEY}" > /tmp/gcp-key.json
+    - gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
+    - gcloud config set project ${GCP_PROJECT_ID}
+    - gcloud container clusters get-credentials ${GKE_CLUSTER} --zone ${GKE_ZONE} --project ${GCP_PROJECT_ID}
+  script:
+    - echo "Checking pod status..."
+    - kubectl get pods -n ${K8S_NAMESPACE} -l app=bookmyshow
+    - kubectl wait --for=condition=Ready pod -l app=bookmyshow -n ${K8S_NAMESPACE} --timeout=120s
+    - echo "Checking service and waiting for external IP..."
+    - |
+      for i in $(seq 1 30); do
+        EXTERNAL_IP=$(kubectl get svc bookmyshow-service -n ${K8S_NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        if [ -n "$EXTERNAL_IP" ]; then
+          echo "Application available at: http://${EXTERNAL_IP}"
+          break
+        fi
+        echo "Waiting for LoadBalancer IP... ($i/30)"
+        sleep 10
+      done
+    - kubectl get svc bookmyshow-service -n ${K8S_NAMESPACE}
+  after_script:
+    - rm -f /tmp/gcp-key.json
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"'
