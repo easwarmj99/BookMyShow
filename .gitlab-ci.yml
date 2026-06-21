@@ -160,11 +160,16 @@ deploy_to_gke:
   needs:
     - push_to_artifact_registry
   before_script:
-    - apt-get update && apt-get install -y curl apt-transport-https gnupg gettext-base
+    - apt-get update && apt-get install -y curl apt-transport-https gnupg gettext-base google-cloud-cli-gke-gcloud-auth-plugin
+
+    - curl -LO "https://dl.k8s.io/release/v1.33.2/bin/linux/amd64/kubectl"
+    - chmod +x kubectl
+    - mv kubectl /usr/local/bin/
+    - kubectl version --client    
     - echo "$GCP_SA_KEY" > /tmp/gcp-key.json
     - gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
     - gcloud config set project ${GCP_PROJECT_ID}
-    - gcloud components install kubectl --quiet
+   
     - export USE_GKE_GCLOUD_AUTH_PLUGIN=True
     - gcloud container clusters get-credentials ${GKE_CLUSTER} --zone ${GKE_ZONE} --project ${GCP_PROJECT_ID}
   script:
