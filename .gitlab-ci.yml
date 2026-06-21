@@ -43,8 +43,8 @@ sonarqube_scan:
     SONAR_TOKEN: "${SONAR_TOKEN}"
     GIT_DEPTH: "0"
   script:
-    - >
-      sonar-scanner
+    - echo "SONAR_HOST_URL=$SONAR_HOST_URL"
+    - sonar-scanner
       -Dsonar.projectKey=bookmyshow
       -Dsonar.sources=bookmyshow-app/src
       -Dsonar.host.url=${SONAR_HOST_URL}
