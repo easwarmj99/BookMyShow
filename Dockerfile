@@ -3,13 +3,14 @@
 # Multi-stage build: Node (build) -> Nginx (serve)
 # ===================================================================
 # ---------- Stage 1: Build ----------
-FROM node:18-alpine AS build
+FROM node:16-alpine AS build
 WORKDIR /app
 # Install dependencies first (better layer caching)
 COPY bookmyshow-app/package*.json ./
 RUN npm install --legacy-peer-deps
 # Copy source and build static assets
 COPY bookmyshow-app/ ./
+ENV NODE_OPTIONS=--openssl-legacy-provider
 RUN npm run build
 # ---------- Stage 2: Serve ----------
 FROM nginx:1.25-alpine
