@@ -1,0 +1,48 @@
+
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+
+metadata:
+  name: bms-backend-config
+  namespace: bookmyshow
+
+spec:
+  connectionDraining:
+    drainingTimeoutSec: 60
+
+  healthCheck:
+    checkIntervalSec: 15
+    timeoutSec: 5
+    port: 80
+    requestPath: /
+    type: HTTP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+
+metadata:
+  name: bookmyshow-ingress
+  namespace: bookmyshow
+
+  annotations:
+    kubernetes.io/ingress.class: gce
+
+spec:
+  defaultBackend:
+    service:
+      name: bookmyshow-svc
+      port:
+        number: 80
+
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: bookmyshow-svc
+                port:
+                  number: 80
+
