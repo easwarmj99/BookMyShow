@@ -142,7 +142,7 @@ push_to_artifact_registry:
     - gcloud config set project ${GCP_PROJECT_ID}
   script:
     - docker push ${FULL_IMAGE}:${IMAGE_TAG}
-    - docker push ${FULL_IMAGE}:latest
+    #- docker push ${FULL_IMAGE}:latest
   after_script:
     - rm -f /tmp/gcp-key.json
   rules:
