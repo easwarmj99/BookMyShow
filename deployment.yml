@@ -16,6 +16,6 @@ spec:
     spec:
       containers:
       - name: bms-container
-        image: meena08/newbmsserver  # Replace with your Docker image
+        image: easwarmj/newbmsserver  # Replace with your Docker image
         ports:
         - containerPort: 3000  # Replace with the port your app runs on
