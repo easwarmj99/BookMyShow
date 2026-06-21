@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+name: bookmyshow
+labels:
+app: bookmyshow
+env: production
+managed-by: gitlab-cicd
+# Pod Security Standards — enforce "restricted" policy on all pods in this namespace
+# restricted = most secure: non-root, no privilege escalation, seccomp required
+pod-security.kubernetes.io/enforce: restricted
+pod-security.kubernetes.io/enforce-version: v1.28
+pod-security.kubernetes.io/warn: restricted
+pod-security.kubernetes.io/audit: restricted
