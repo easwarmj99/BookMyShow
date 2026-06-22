@@ -45,14 +45,14 @@ spec:
           readinessProbe:
             httpGet:
               path: /healthz
-              port: 8080
+              port: 6521
             initialDelaySeconds: 5
             periodSeconds: 10
 
           livenessProbe:
             httpGet:
               path: /healthz
-              port: 8080
+              port: 6521
             initialDelaySeconds: 15
             periodSeconds: 20
 
