@@ -55,11 +55,12 @@ spec:
               port: 8080
             initialDelaySeconds: 15
             periodSeconds: 20
-          securityContext:
+           securityContext:
             runAsNonRoot: true
             runAsUser: 1001
             allowPrivilegeEscalation: false
-         # NEW: Exporter Sidecar Container
+        
+        # NEW: Exporter Sidecar Container
         - name: nginx-exporter
           image: nginx/nginx-prometheus-exporter:1.0.0
           ports:
@@ -68,4 +69,4 @@ spec:
           args:
             - -nginx.scrape-uri=http://127.0.0.1:8080/nginx_status
 
-    restartPolicy: Always
+      restartPolicy: Always
