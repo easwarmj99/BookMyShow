@@ -12,7 +12,7 @@ RUN npm install --legacy-peer-deps
 COPY bookmyshow-app/ ./
 
 RUN npm run build
-# ---------- Stage 2: Serve ----------
+# ---------- Stage 2: Serve -----
 FROM nginx:1.25-alpine
 # Remove default nginx static assets
 RUN rm -rf /usr/share/nginx/html/*
