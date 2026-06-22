@@ -176,11 +176,11 @@ deploy_to_gke:
     - kubectl version --client
     - kubectl apply -f k8s/namespace.yaml
 
-    - export IMAGE_FULL="${FULL_IMAGE}:${IMAGE_TAG}"
+    - export IMAGE_TAG="${IMAGE_TAG}"
 
     - envsubst < k8s/deployment.yaml > k8s/deployment-rendered.yaml
 
-    - sed -i "s#REGION-docker.pkg.dev/PROJECT_ID/bookmyshow-repo/bookmyshow:IMAGE_TAG#${IMAGE_FULL}#g" k8s/deployment-rendered.yaml
+    #- sed -i "s#REGION-docker.pkg.dev/PROJECT_ID/bookmyshow-repo/bookmyshow:IMAGE_TAG#${IMAGE_FULL}#g" k8s/deployment-rendered.yaml
 
     - kubectl apply -f k8s/deployment-rendered.yaml -n ${K8S_NAMESPACE}
 
