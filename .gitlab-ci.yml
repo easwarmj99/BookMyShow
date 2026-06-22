@@ -11,6 +11,7 @@ stages:
   - push
   - deploy
   - validate
+  - monitoring
 
 variables:
   IMAGE_NAME: "bookmyshow"
@@ -234,6 +235,41 @@ validate_deployment:
         sleep 10
       done
     - kubectl get svc bookmyshow-service -n ${K8S_NAMESPACE}
+  after_script:
+    - rm -f /tmp/gcp-key.json
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"'
+
+# ===================================================================
+# STAGE 7: Monitoring Implementation
+# ===================================================================
+deploy_monitoring:
+  stage: monitoring
+  image: google/cloud-sdk:latest
+  tags:
+    - bookmyshow-runner
+  needs:
+    - validate_deployment
+  before_script:
+    - apt-get update && apt-get install -y curl apt-transport-https gnupg gettext-base google-cloud-cli-gke-gcloud-auth-plugin
+    - curl -LO "https://dl.k8s.io/release/v1.33.2/bin/linux/amd64/kubectl"
+    - chmod +x kubectl
+    - mv kubectl /usr/local/bin/
+    - curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+    - chmod 700 get_helm.sh
+    - ./get_helm.sh
+    - echo "$GCP_SA_KEY" > /tmp/gcp-key.json
+    - gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
+    - gcloud config set project ${GCP_PROJECT_ID}
+    - export USE_GKE_GCLOUD_AUTH_PLUGIN=True
+    - gcloud container clusters get-credentials ${GKE_CLUSTER} --zone ${GKE_ZONE} --project ${GCP_PROJECT_ID}
+  script:
+    - echo "Deploying Monitoring Engine via Helm..."
+    - helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+    - helm repo update
+    - helm upgrade --install prometheus-stack prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace --wait
+    - echo "Applying ServiceMonitor configuration..."
+    - kubectl apply -f k8s/servicemonitor.yaml -n ${K8S_NAMESPACE}
   after_script:
     - rm -f /tmp/gcp-key.json
   rules:
