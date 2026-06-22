@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
         - name: bookmyshow
-          image: asia-south1-docker.pkg.dev/bookmyshow-500116/bookmyshow-repo/bookmyshow:IMAGE_TAG
+          image: asia-south1-docker.pkg.dev/bookmyshow-500116/bookmyshow-repo/bookmyshow:${IMAGE_TAG}
           imagePullPolicy: Always
 
           ports:
