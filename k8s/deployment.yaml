@@ -56,12 +56,12 @@ spec:
             initialDelaySeconds: 15
             periodSeconds: 20
 
-         securityContext:
+          securityContext:
             runAsNonRoot: true
             runAsUser: 1001
             allowPrivilegeEscalation: false
          # NEW: Exporter Sidecar Container
-       - name: nginx-exporter
+        - name: nginx-exporter
           image: nginx/nginx-prometheus-exporter:1.0.0
           ports:
             - containerPort: 9113
