@@ -32,7 +32,7 @@ spec:
           imagePullPolicy: Always
 
           ports:
-            - containerPort: 8080
+            - containerPort: 6521
 
           resources:
             requests:
