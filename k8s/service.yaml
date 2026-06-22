@@ -5,7 +5,9 @@ metadata:
   namespace: bookmyshow
   labels:
     app: bookmyshow
-
+  annotations:
+    # CRUCIAL: Tells GCP Load Balancer to talk to your Nginx pods via HTTP
+    cloud.google.com/app-protocols: '{"http":"HTTP"}'
 spec:
   type: LoadBalancer
 
